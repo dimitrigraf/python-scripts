@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+# originally taken from here: https://gist.github.com/seventhskye/0cc7b2804252975d36dca047ab7729e9
+# gists are your friends
+
+# import libraries to use
+from colorama import Fore, Style
+import argparse
+import boto3
+import botocore.exceptions
+
+# create argument parser that makes it easy to define positional, required and optional arguments
+# it also has a help functionality and usage message built in
+parser = argparse.ArgumentParser(
+    description="Delete all objects in a S3 bucket, including versioned ones."
+)
+parser.add_argument("--rb", help="remove bucket after emptying it", action="store_true")
+requiredArgs = parser.add_argument_group("required named arguments")
+requiredArgs.add_argument(
+    "-b", "--bucket", help="the name of the bucket to clean", required=True
+)
+requiredArgs.add_argument(
+    "-p", "--profile", help="the AWS profile to use (~/.aws/credentials)", required=True
+)
+args = parser.parse_args()
+
+# create session and client
+try:
+    session = boto3.Session(profile_name=args.profile)
+except Exception as e:
+    exit(Fore.RED + str(e))
+
+Endpoint = "Put your endpoint URL here"
+client = session.client("s3", endpoint_url=Endpoint)
+
+# set initial variables that are used in loop
+# MaxKeys stays the same value
+# IsTruncated and KeyMarker change during the loop
+MaxKeys = 1000
+IsTruncated = True
+KeyMarker = None
+
+while IsTruncated == True:
+    # get all objects, including object versions
+    # only get as many at once as the value of MaxKeys says
+    # that's necessary for an efficient delete process
+    try:
+        if not KeyMarker:
+            version_list = client.list_object_versions(
+                Bucket=args.bucket, MaxKeys=MaxKeys
+            )
+        else:
+            version_list = client.list_object_versions(
+                Bucket=args.bucket, MaxKeys=MaxKeys, KeyMarker=KeyMarker
+            )
+    except Exception as e:
+        exit(Fore.RED + str(e))
+
+    # create a new array for each object/version with the necessary information,
+    # append that array to a list and finally use that list to delete the objects
+    # in case of an exception it's most likely that there are no more objects/versions
+    # to delete, that's why the exception handling simply passes
+    try:
+        objects = []
+        versions = version_list["Versions"]
+        for v in versions:
+            objects.append({"VersionId": v["VersionId"], "Key": v["Key"]})
+        client.delete_objects(Bucket=args.bucket, Delete={"Objects": objects})
+    except:
+        pass
+
+    # delete markers sit on top of a versioned object that was "deleted"
+    # instead of deleting it really, such a placeholder/marker is set on top of it
+    # more on this here: https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html
+    try:
+        objects = []
+        delete_markers = version_list["DeleteMarkers"]
+        for d in delete_markers:
+            objects.append({"VersionId": d["VersionId"], "Key": d["Key"]})
+        client.delete_objects(Bucket=args.bucket, Delete={"Objects": objects})
+    except:
+        pass
+
+    # are there still objects to delete?
+    IsTruncated = version_list.get("IsTruncated")
+    KeyMarker = version_list.get("NextKeyMarker")
+
+# check whether all objects/versions were deleted
+# and inform user about result
+BucketEmpty = version_list.get("Versions") == None
+
+if BucketEmpty:
+    print(Fore.GREEN + "Successfully deleted all objects/versions in bucket.")
+else:
+    print(Fore.RED + "Not all objects/versions deleted. Please, investigate.")
+
+# delete bucket if --rb was passed to the script
+# and if bucket is empty
+if args.rb == True and BucketEmpty:
+    client.delete_bucket(Bucket=args.bucket)
+    print(Fore.GREEN + "Bucket removed successfully.")
+
+# reset colors
+print(Style.RESET_ALL)

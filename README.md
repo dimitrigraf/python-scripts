@@ -1,15 +1,17 @@
 # A bunch of Python scripts to use, enhance and share
 
+## dependencies
+Some of these Python 3 scripts use libraries that have to be installed separately.
+It's best to use a Python [Virtual Environment](https://docs.python.org/3/tutorial/venv.html#virtual-environments-and-packages) for that.
+This way you don't install the libraries in your OS itself.
+
+Once you have activated the Virtual Environment you can install all the dependencies with `pip install -r requirements.txt`.
+
 ## split-yaml
 
 This Python 3 script takes a YAML file with multiple documents (separated by `---`) and writes each of them into a new, separate file.
 
 Use  `split-yaml -h` for a usage overview.
-
-### dependencies
-
-This script requires the [PyYAML](https://pypi.org/project/PyYAML/) library version 5.4.1 or later.
-The library can be installed with `pip install pyyaml`, either directly (requires `pip` to be installed) or from within a virtual environment (includes `pip`).
 
 ### how to set the filename scheme
 
@@ -43,3 +45,12 @@ ln -sf <repo path>/split-yaml ~/bin/split-yaml
 ```
 
 Now, reload/reopen your shell/terminal and you can use `split-yaml` from wherever you are.
+
+## empty-s3-bucket
+
+This script removes all objects, versions and delete markers from a specified bucket.
+
+Use `empty-s3-bucket -h` for usage information or have a look at the script.
+
+**Important:**
+Currently the script fails with an exception if you pass a wrong bucket and/or profile.
