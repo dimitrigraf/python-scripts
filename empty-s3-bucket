@@ -87,7 +87,10 @@ while IsTruncated == True:
 
 # check whether all objects/versions were deleted
 # and inform user about result
-BucketEmpty = version_list.get("Versions") == None
+BucketEmpty = (
+    client.list_object_versions(Bucket=args.bucket, MaxKeys=MaxKeys).get("Versions")
+    == None
+)
 
 if BucketEmpty:
     print(Fore.GREEN + "Successfully deleted all objects/versions in bucket.")
