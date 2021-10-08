@@ -13,11 +13,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--rm", help="remove YAML source file after splitting it up", action="store_true"
 )
-requiredArgs = parser.add_argument_group("required named arguments")
-requiredArgs.add_argument(
+required_args = parser.add_argument_group("required named arguments")
+required_args.add_argument(
     "-f", "--file", help="the YAML source file to split up", required=True
 )
-requiredArgs.add_argument(
+required_args.add_argument(
     "-k",
     "--key",
     help="the key in each YAML document whose value will be used for the new filename <key-value>.yaml",
@@ -27,15 +27,15 @@ args = parser.parse_args()
 
 # open source file for reading, automatically closed
 # in the end by using the 'with' keyword
-with open(args.file, "r") as sourceFile:
+with open(args.file, "r") as source_file:
 
     # loop through all YAML documents contained in source file
     # and create a new file for each of them
     # with the value of the given key as the file name
-    for document in yaml.safe_load_all(sourceFile):
-        fileName = document[args.key].lower() + ".yaml"
-        with open(fileName, "w") as newFile:
-            yaml.dump(document, newFile, sort_keys=False)
+    for document in yaml.safe_load_all(source_file):
+        file_name = document[args.key].lower() + ".yaml"
+        with open(file_name, "w") as new_file:
+            yaml.dump(document, new_file, sort_keys=False)
 
 # remove YAML source file if --rm flag was specified
 if args.rm:

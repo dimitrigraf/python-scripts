@@ -15,11 +15,11 @@ parser = argparse.ArgumentParser(
     description="Delete all objects in a S3 bucket, including versioned ones."
 )
 parser.add_argument("--rb", help="remove bucket after emptying it", action="store_true")
-requiredArgs = parser.add_argument_group("required named arguments")
-requiredArgs.add_argument(
+required_args = parser.add_argument_group("required named arguments")
+required_args.add_argument(
     "-b", "--bucket", help="the name of the bucket to clean", required=True
 )
-requiredArgs.add_argument(
+required_args.add_argument(
     "-p", "--profile", help="the AWS profile to use (~/.aws/credentials)", required=True
 )
 args = parser.parse_args()
@@ -30,28 +30,28 @@ try:
 except Exception as e:
     exit(Fore.RED + str(e))
 
-Endpoint = "Put your endpoint URL here"
-client = session.client("s3", endpoint_url=Endpoint)
+endpoint = "Put your endpoint URL here"
+client = session.client("s3", endpoint_url=endpoint)
 
 # set initial variables that are used in loop
-# MaxKeys stays the same value
-# IsTruncated and KeyMarker change during the loop
-MaxKeys = 1000
-IsTruncated = True
-KeyMarker = None
+# max_keys stays the same value
+# is_truncated and key_marker change during the loop
+max_keys = 1000
+is_truncated = True
+key_marker = None
 
-while IsTruncated == True:
+while is_truncated == True:
     # get all objects, including object versions
-    # only get as many at once as the value of MaxKeys says
+    # only get as many at once as the value of max_keys says
     # that's necessary for an efficient delete process
     try:
-        if not KeyMarker:
+        if not key_marker:
             version_list = client.list_object_versions(
-                Bucket=args.bucket, MaxKeys=MaxKeys
+                Bucket=args.bucket, MaxKeys=max_keys
             )
         else:
             version_list = client.list_object_versions(
-                Bucket=args.bucket, MaxKeys=MaxKeys, KeyMarker=KeyMarker
+                Bucket=args.bucket, MaxKeys=max_keys, KeyMarker=key_marker
             )
     except Exception as e:
         exit(Fore.RED + str(e))
@@ -82,24 +82,24 @@ while IsTruncated == True:
         pass
 
     # are there still objects to delete?
-    IsTruncated = version_list.get("IsTruncated")
-    KeyMarker = version_list.get("NextKeyMarker")
+    is_truncated = version_list.get("IsTruncated")
+    key_marker = version_list.get("NextKeyMarker")
 
 # check whether all objects/versions were deleted
 # and inform user about result
-BucketEmpty = (
-    client.list_object_versions(Bucket=args.bucket, MaxKeys=MaxKeys).get("Versions")
+bucket_empty = (
+    client.list_object_versions(Bucket=args.bucket, MaxKeys=max_keys).get("Versions")
     == None
 )
 
-if BucketEmpty:
+if bucket_empty:
     print(Fore.GREEN + "Successfully deleted all objects/versions in bucket.")
 else:
     print(Fore.RED + "Not all objects/versions deleted. Please, investigate.")
 
 # delete bucket if --rb was passed to the script
 # and if bucket is empty
-if args.rb == True and BucketEmpty:
+if args.rb == True and bucket_empty:
     client.delete_bucket(Bucket=args.bucket)
     print(Fore.GREEN + "Bucket removed successfully.")
 
